@@ -55,6 +55,26 @@ async function fetchTiers(slug: string): Promise<TierOption[]> {
   }
 }
 
+interface ApiInfo {
+  slug: string;
+  model: string;
+  endpoint: string;
+  auth: string;
+  request_fields?: Record<string, string>;
+  example_request?: Record<string, unknown>;
+  curl?: string;
+}
+
+async function fetchApiInfo(slug: string): Promise<ApiInfo | null> {
+  try {
+    const r = await fetch(`${ROUTER}/v1/${slug}/info`, { next: { revalidate: 600 } });
+    if (!r.ok) return null;
+    return (await r.json()) as ApiInfo;
+  } catch {
+    return null;
+  }
+}
+
 export async function generateStaticParams() {
   return loadAllProducts().map(p => ({ slug: p.slug }));
 }
@@ -91,6 +111,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const readmeHtml = await marked.parse(product.readmeMarkdown);
   const launchHtml = product.launchMarkdown ? await marked.parse(product.launchMarkdown) : null;
   const tiers = await fetchTiers(slug);
+  const apiInfo = await fetchApiInfo(slug);
 
   return (
     <main style={{ maxWidth: 900, margin: "0 auto", padding: "40px 24px" }}>
@@ -160,6 +181,37 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           </a>
         </div>
       </div>
+
+      {apiInfo && (
+        <section style={{ marginBottom: 48 }}>
+          <h2 style={{ fontSize: 20, marginBottom: 12 }}>API quickstart</h2>
+          <p style={{ color: "#a3a3a3", fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>
+            After purchase, you&apos;ll receive an API key (<code style={{ background: "#171717", padding: "1px 6px", borderRadius: 3 }}>ock_...</code>) by email. Call the endpoint below with that key as the bearer token.
+          </p>
+          {apiInfo.request_fields && Object.keys(apiInfo.request_fields).length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Request fields</div>
+              <ul style={{ margin: 0, paddingLeft: 20, color: "#d4d4d4", fontSize: 13, lineHeight: 1.6 }}>
+                {Object.entries(apiInfo.request_fields).map(([k, v]) => (
+                  <li key={k}><code style={{ background: "#171717", padding: "1px 6px", borderRadius: 3 }}>{k}</code> — {v}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {apiInfo.curl && (
+            <pre style={{
+              background: "#0c0c0c", border: "1px solid #262626", borderRadius: 6,
+              padding: 16, fontSize: 12, color: "#d4d4d4", overflowX: "auto",
+              fontFamily: "monospace", lineHeight: 1.5,
+            }}>
+              <code>{apiInfo.curl}</code>
+            </pre>
+          )}
+          <div style={{ fontSize: 12, color: "#737373", marginTop: 8 }}>
+            Model: {apiInfo.model}. Quota enforced per plan.
+          </div>
+        </section>
+      )}
 
       {launchHtml && (
         <section style={{ marginBottom: 48 }}>
