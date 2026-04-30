@@ -1,0 +1,10 @@
+import { MetadataRoute } from "next";
+
+const SITE_URL = "https://portfolio-site-beta-swart-35.vercel.app";
+
+export default function robots(): MetadataRoute.Robots {
+  return {
+    rules: { userAgent: "*", allow: "/", disallow: ["/api/"] },
+    sitemap: `${SITE_URL}/sitemap.xml`,
+  };
+}
